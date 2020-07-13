@@ -1,0 +1,32 @@
+# This pipeline will just build PulseAudio to be sure we dont break
+
+  trigger:
+    - working
+    
+  pool:
+    vmImage: 'ubuntu-latest'
+    
+  steps:
+    - checkout: self
+  
+    - script: sudo apt-get update && sudo apt-get install --no-install-recommends -y
+              build-essential
+              autopoint
+              autoconf
+              libltdl-dev
+              libtool
+              libx11-dev
+              libx11-xcb-dev
+              libsndfile1
+              libcap-dev
+              libsndfile-dev
+              pkg-config
+              gettext
+              software-properties-common
+      displayName: 'Install Dependencies'
+    
+    - script: ./bootstrap.sh
+      displayName: 'Boostrap'
+    
+    - script: make
+      displayName: 'Make'
