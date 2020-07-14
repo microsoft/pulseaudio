@@ -37,6 +37,8 @@ all_modules = [
   [ 'module-null-sink', 'module-null-sink.c' ],
   [ 'module-null-source', 'module-null-source.c' ],
   [ 'module-position-event-sounds', 'module-position-event-sounds.c' ],
+  [ 'module-rdp-sink', 'rdp/module-rdp-sink.c'],
+  [ 'module-rdp-source', 'rdp/module-rdp-source.c'],
   [ 'module-remap-sink', 'module-remap-sink.c' ],
   [ 'module-remap-source', 'module-remap-source.c' ],
   [ 'module-rescue-streams', 'module-rescue-streams.c' ],
