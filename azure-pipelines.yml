@@ -24,7 +24,6 @@
               libsndfile1
               libcap-dev
               libsndfile-dev
-              libxml2-dev
               ninja-build
               pkg-config
               gettext
@@ -38,6 +37,7 @@
                     -Ddatabase=simple
                     -Ddoxygen=false
                     -Dgsettings=disabled
+                    -Dman=false
                     -Dtests=false
       displayName: 'Meson (pulseaudio)'
 
