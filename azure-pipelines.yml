@@ -18,6 +18,7 @@
               autoconf
               libltdl-dev
               libtool
+              libxtst-dev
               libx11-dev
               libx11-xcb-dev
               libsndfile1
