@@ -29,13 +29,16 @@ msgstr ""
 "Report-Msgid-Bugs-To: https://gitlab.freedesktop.org/pulseaudio/pulseaudio/"
 "issues/new\n"
 "POT-Creation-Date: 2022-06-18 09:49+0300\n"
-"PO-Revision-Date: 2012-01-30 09:52+0000\n"
-"Last-Translator: Josep Torné Llavall <josep.torne@gmail.com>\n"
-"Language-Team: Catalan <fedora@softcatala.net>\n"
+"PO-Revision-Date: 2022-09-26 14:19+0000\n"
+"Last-Translator: Toni Estevez <toni.estevez@gmail.com>\n"
+"Language-Team: Catalan <https://translate.fedoraproject.org/projects/"
+"pulseaudio/pulseaudio/ca/>\n"
 "Language: ca\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=n != 1;\n"
+"X-Generator: Weblate 4.14.1\n"
 
 #: src/daemon/cmdline.c:113
 #, fuzzy, c-format
@@ -704,25 +707,23 @@ msgstr "Entrada analògica"
 
 #: src/modules/alsa/alsa-mixer.c:2800
 msgid "Dock Microphone"
-msgstr ""
+msgstr "Micròfon de l'acoblador"
 
 #: src/modules/alsa/alsa-mixer.c:2802
 msgid "Headset Microphone"
-msgstr ""
+msgstr "Micròfon de l'auricular"
 
 #: src/modules/alsa/alsa-mixer.c:2806
 msgid "Analog Output"
 msgstr "Sortida analògica"
 
 #: src/modules/alsa/alsa-mixer.c:2808
-#, fuzzy
 msgid "Headphones 2"
-msgstr "Auriculars"
+msgstr "Auriculars 2"
 
 #: src/modules/alsa/alsa-mixer.c:2809
-#, fuzzy
 msgid "Headphones Mono Output"
-msgstr "Sortida mono analògica"
+msgstr "Sortida mono analògica dels auriculars"
 
 #: src/modules/alsa/alsa-mixer.c:2810
 msgid "Line Out"
@@ -879,7 +880,7 @@ msgstr "Envoltant digital 4.0 (IEC958/AC3)"
 
 #: src/modules/alsa/alsa-mixer.c:4593
 msgid "Digital Surround 5.1 (IEC958/AC3)"
-msgstr "Envolvent digital 5.1 (IEC958/AC3)"
+msgstr "Envoltant digital 5.1 (IEC958/AC3)"
 
 #: src/modules/alsa/alsa-mixer.c:4594
 msgid "Digital Surround 5.1 (IEC958/DTS)"
@@ -895,11 +896,11 @@ msgstr "So envoltant digital 5.1 (HDMI)"
 
 #: src/modules/alsa/alsa-mixer.c:4597
 msgid "Chat"
-msgstr ""
+msgstr "Xat"
 
 #: src/modules/alsa/alsa-mixer.c:4598
 msgid "Game"
-msgstr ""
+msgstr "Joc"
 
 #: src/modules/alsa/alsa-mixer.c:4732
 msgid "Analog Mono Duplex"
@@ -1447,7 +1448,7 @@ msgstr "Auxiliar 28"
 
 #: src/pulse/channelmap.c:150
 msgid "Auxiliary 29"
-msgstr "Auxiliar 31"
+msgstr "Auxiliar 29"
 
 #: src/pulse/channelmap.c:151
 msgid "Auxiliary 30"
@@ -2774,10 +2775,12 @@ msgstr ""
 #: src/utils/pactl.c:1711 src/utils/pactl.c:1760
 msgid "list-handlers message response could not be parsed correctly"
 msgstr ""
+"no s'ha pogut analitzar correctament la resposta del missatge de list-"
+"handlers"
 
 #: src/utils/pactl.c:1718
 msgid "list-handlers message response is not a JSON array"
-msgstr ""
+msgstr "la resposta del missatge de list-handlers no és una matriu de JSON"
 
 #: src/utils/pactl.c:1729
 #, c-format

@@ -1,7 +1,7 @@
 project('pulseaudio', 'c',
         version : run_command(find_program('git-version-gen'), join_paths(meson.current_source_dir(), '.tarball-version'), check : false).stdout().strip(),
         meson_version : '>= 0.50.0',
-        default_options : [ 'c_std=gnu11', 'cpp_std=c++11' ]
+        default_options : [ 'c_std=gnu11', 'cpp_std=c++17' ]
         )
 
 if not meson.is_subproject()
@@ -27,7 +27,7 @@ pa_protocol_version = 35
 
 # The stable ABI for client applications, for the version info x:y:z
 # always will hold x=z
-libpulse_version_info = [24, 2, 24]
+libpulse_version_info = [24, 3, 24]
 
 # A simplified, synchronous, ABI-stable interface for client
 # applications, for the version info x:y:z always will hold x=z
@@ -152,8 +152,6 @@ cdata.set_quoted('PA_SRCDIR', join_paths(meson.current_source_dir(), 'src'))
 cdata.set_quoted('PA_BUILDDIR', meson.current_build_dir())
 if host_machine.system() == 'windows'
   cdata.set_quoted('PA_SOEXT', '.dll')
-elif host_machine.system() == 'darwin'
-  cdata.set_quoted('PA_SOEXT', '.dylib')
 else
   cdata.set_quoted('PA_SOEXT', '.so')
 endif
@@ -168,8 +166,7 @@ cdata.set_quoted('PA_SYSTEM_USER', get_option('system_user'))
 cdata.set_quoted('PA_SYSTEM_GROUP', get_option('system_group'))
 cdata.set_quoted('PA_ACCESS_GROUP', get_option('access_group'))
 cdata.set_quoted('PA_CFLAGS', 'Not yet supported on meson')
-cdata.set_quoted('PA_ALSA_PATHS_DIR', join_paths(alsadatadir, 'paths'))
-cdata.set_quoted('PA_ALSA_PROFILE_SETS_DIR', join_paths(alsadatadir, 'profile-sets'))
+cdata.set_quoted('PA_ALSA_DATA_DIR', alsadatadir)
 cdata.set_quoted('DESKTOPFILEDIR', join_paths(datadir, 'applications'))
 cdata.set_quoted('PULSE_LOCALEDIR', localedir)
 cdata.set_quoted('GETTEXT_PACKAGE', 'pulseaudio')
@@ -193,6 +190,7 @@ endif
 # rather than ending up in the config.h file?
 if host_machine.system() == 'darwin'
   cdata.set('OS_IS_DARWIN', 1)
+  cdata.set('HAVE_COREAUDIO', 1)
   cdata.set('_DARWIN_C_SOURCE', '200112L') # Needed to get NSIG on Mac OS
 elif host_machine.system() == 'windows'
   cdata.set('OS_IS_WIN32', 1)
@@ -728,7 +726,7 @@ if get_option('daemon')
     cdata.set('HAVE_SOXR', 1)
   endif
 
-  webrtc_dep = dependency('webrtc-audio-processing', version : '>= 0.2', required : get_option('webrtc-aec'))
+  webrtc_dep = dependency('webrtc-audio-processing-1', version : '>= 1.0', required : get_option('webrtc-aec'))
   if webrtc_dep.found()
     cdata.set('HAVE_WEBRTC', 1)
   endif

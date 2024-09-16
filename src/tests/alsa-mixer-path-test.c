@@ -21,7 +21,7 @@ static const char *get_default_paths_dir(void) {
     if (pa_run_from_build_tree())
         return PA_SRCDIR "/modules/alsa/mixer/paths/";
     else
-        return PA_ALSA_PATHS_DIR;
+        return PA_ALSA_DATA_DIR PA_PATH_SEP "paths/";
 }
 
 static pa_strlist *load_makefile() {
@@ -107,7 +107,6 @@ int main(int argc, char *argv[]) {
     s = suite_create("Alsa-mixer-path");
     tc = tcase_create("alsa-mixer-path");
     tcase_add_test(tc, mixer_path_test);
-    tcase_set_timeout(tc, 30);
     suite_add_tcase(s, tc);
 
     sr = srunner_create(s);
