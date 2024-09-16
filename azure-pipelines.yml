@@ -25,8 +25,5 @@
               software-properties-common
       displayName: 'Install Dependencies'
     
-    - script: ./bootstrap.sh
-      displayName: 'Boostrap'
-    
     - script: make
       displayName: 'Make'
