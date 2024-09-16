@@ -24,6 +24,7 @@
               libsndfile1
               libcap-dev
               libsndfile-dev
+              ninja-build
               pkg-config
               gettext
               software-properties-common
