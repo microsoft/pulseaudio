@@ -5,6 +5,9 @@
     
   pool:
     vmImage: 'ubuntu-20.04'
+
+  variables:
+    prefix: '/usr/local'
     
   steps:
     - checkout: self
@@ -15,18 +18,28 @@
               autoconf
               libltdl-dev
               libtool
+              libxtst-dev
               libx11-dev
               libx11-xcb-dev
               libsndfile1
               libcap-dev
               libsndfile-dev
+              ninja-build
               pkg-config
               gettext
               software-properties-common
       displayName: 'Install Dependencies'
-    
-    - script: ./bootstrap.sh
-      displayName: 'Boostrap'
-    
-    - script: make
-      displayName: 'Make'
+
+    - script: sudo pip3 install meson
+      displayName: 'Install Meson (from PIP)'
+
+    - script: meson --prefix=$(prefix) build
+                    -Ddatabase=simple
+                    -Ddoxygen=false
+                    -Dgsettings=disabled
+                    -Dman=false
+                    -Dtests=false
+      displayName: 'Meson (pulseaudio)'
+
+    - script: ninja -C build -j8
+      displayName: 'Ninja (pulseaudio)'

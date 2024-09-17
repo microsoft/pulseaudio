@@ -99,6 +99,9 @@ option('bluez5-native-headset',
 option('bluez5-ofono-headset',
        type : 'boolean',
        description : 'Optional oFono headset backend support (BlueZ 5)')
+option('consolekit',
+       type : 'feature', value : 'auto',
+       description : 'Optional ConsoleKit support')
 option('dbus',
        type : 'feature', value : 'auto',
        description : 'Optional D-Bus support')
@@ -166,7 +169,7 @@ option('x11',
        type : 'feature', value : 'auto',
        description : 'Optional X11 support')
 option('enable-smoother-2',
-       type : 'boolean', value : 'true',
+       type : 'boolean', value : true,
        description : 'Use alternative time smoother implementation')
 
 # Echo cancellation

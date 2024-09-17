@@ -8,17 +8,18 @@ msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: https://gitlab.freedesktop.org/pulseaudio/pulseaudio/"
 "issues/new\n"
-"POT-Creation-Date: 2022-05-16 23:56+0300\n"
-"PO-Revision-Date: 2019-09-01 16:15+0300\n"
-"Last-Translator: Moo\n"
-"Language-Team: \n"
+"POT-Creation-Date: 2022-06-18 09:49+0300\n"
+"PO-Revision-Date: 2023-02-21 23:21+0000\n"
+"Last-Translator: mooo <hazap@hotmail.com>\n"
+"Language-Team: Lithuanian <https://translate.fedoraproject.org/projects/"
+"pulseaudio/pulseaudio/lt/>\n"
 "Language: lt\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Generator: Poedit 2.2.1\n"
-"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && (n"
-"%100<10 || n%100>=20) ? 1 : 2);\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && ("
+"n%100<10 || n%100>=20) ? 1 : 2);\n"
+"X-Generator: Weblate 4.15.2\n"
 
 #: src/daemon/cmdline.c:113
 #, c-format
@@ -702,9 +703,8 @@ msgid "Analog Output"
 msgstr "Analoginė išvestis"
 
 #: src/modules/alsa/alsa-mixer.c:2808
-#, fuzzy
 msgid "Headphones 2"
-msgstr "Ausinės"
+msgstr "Ausinės 2"
 
 #: src/modules/alsa/alsa-mixer.c:2809
 msgid "Headphones Mono Output"
@@ -751,9 +751,8 @@ msgid "Chat Output"
 msgstr "Pokalbio išvestis"
 
 #: src/modules/alsa/alsa-mixer.c:2821
-#, fuzzy
 msgid "Chat Input"
-msgstr "Pokalbio išvestis"
+msgstr "Pokalbio įvestis"
 
 #: src/modules/alsa/alsa-mixer.c:2822
 #, fuzzy
@@ -1176,8 +1175,8 @@ msgstr ""
 "schema> autoloaded=<nustatyti ar šis modulis bus įkeliamas automatiškai> "
 "use_volume_sharing=<yes arba no> "
 
-#: src/modules/module-equalizer-sink.c:1094
-#: src/modules/module-equalizer-sink.c:1217
+#: src/modules/module-equalizer-sink.c:1097
+#: src/modules/module-equalizer-sink.c:1220
 #, c-format
 msgid "FFT based equalizer on %s"
 msgstr "FFT pagrįstas glodintuvas ties %s"
@@ -1245,14 +1244,14 @@ msgstr "Garsas ties @HOSTNAME@"
 
 #. TODO: old tunnel put here the remote sink_name into stream name e.g. 'Null Output for lynxis@lazus'
 #. TODO: old tunnel put here the remote source_name into stream name e.g. 'Null Output for lynxis@lazus'
-#: src/modules/module-tunnel-sink-new.c:356
-#: src/modules/module-tunnel-source-new.c:342
+#: src/modules/module-tunnel-sink-new.c:370
+#: src/modules/module-tunnel-source-new.c:354
 #, c-format
 msgid "Tunnel for %s@%s"
 msgstr "Tunelis, skirtas %s@%s"
 
-#: src/modules/module-tunnel-sink-new.c:697
-#: src/modules/module-tunnel-source-new.c:668
+#: src/modules/module-tunnel-sink-new.c:715
+#: src/modules/module-tunnel-source-new.c:684
 #, c-format
 msgid "Tunnel to %s/%s"
 msgstr "Tunelis į %s/%s"
@@ -1603,11 +1602,11 @@ msgstr ""
 msgid "Invalid log target."
 msgstr "Neteisinga žurnalo paskirtis."
 
-#: src/pulsecore/sink.c:3600
+#: src/pulsecore/sink.c:3609
 msgid "Built-in Audio"
 msgstr "Įtaisytas garsas"
 
-#: src/pulsecore/sink.c:3605
+#: src/pulsecore/sink.c:3614
 msgid "Modem"
 msgstr "Modemas"
 

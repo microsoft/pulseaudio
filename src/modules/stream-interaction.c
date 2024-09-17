@@ -100,13 +100,30 @@ static const char *get_trigger_role(struct userdata *u, pa_object *stream, struc
     return NULL;
 }
 
-static const char *find_trigger_stream(struct userdata *u, pa_object *device, pa_object *ignore_stream, struct group *g) {
+static const char *find_trigger_stream(struct userdata *u, pa_object *current_stream, pa_object *device, pa_object *ignore_stream, struct group *g) {
     pa_object *j;
     uint32_t idx;
     const char *trigger_role;
 
     pa_assert(u);
     pa_object_assert_ref(device);
+
+    /* If the current stream is a trigger stream, return the role of this stream, otherwise
+     * return the role of the first trigger stream that is found on the device. */
+
+    trigger_role = get_trigger_role(u, current_stream, g);
+    if (GET_DEVICE_FROM_STREAM(current_stream) == device && current_stream != ignore_stream && trigger_role) {
+
+        if (pa_sink_isinstance(device)) {
+            if (!PA_SINK_INPUT(current_stream)->muted &&
+                PA_SINK_INPUT(current_stream)->state != PA_SINK_INPUT_CORKED)
+                return trigger_role;
+        } else {
+            if (!PA_SOURCE_OUTPUT(current_stream)->muted &&
+                PA_SOURCE_OUTPUT(current_stream)->state != PA_SOURCE_OUTPUT_CORKED)
+                return trigger_role;
+        }
+    }
 
     PA_IDXSET_FOREACH(j, pa_sink_isinstance(device) ? PA_SINK(device)->inputs : PA_SOURCE(device)->outputs, idx) {
         if (j == ignore_stream)
@@ -129,7 +146,7 @@ static const char *find_trigger_stream(struct userdata *u, pa_object *device, pa
     return NULL;
 }
 
-static const char *find_global_trigger_stream(struct userdata *u, pa_object *ignore_stream, struct group *g) {
+static const char *find_global_trigger_stream(struct userdata *u, pa_object *current_stream, pa_object *ignore_stream, struct group *g) {
     const char *trigger_role = NULL;
     pa_sink *sink;
     pa_source *source;
@@ -137,16 +154,20 @@ static const char *find_global_trigger_stream(struct userdata *u, pa_object *ign
 
     pa_assert(u);
 
+    /* Check device of current stream first in case the current stream is a trigger stream. */
+    if ((trigger_role = find_trigger_stream(u, current_stream, GET_DEVICE_FROM_STREAM(current_stream), ignore_stream, g)))
+        return trigger_role;
+
     /* Find any trigger role among the sink-inputs and source-outputs. */
     PA_IDXSET_FOREACH(sink, u->core->sinks, idx)
-        if ((trigger_role = find_trigger_stream(u, PA_OBJECT(sink), ignore_stream, g)))
+        if ((trigger_role = find_trigger_stream(u, current_stream, PA_OBJECT(sink), ignore_stream, g)))
             break;
 
     if (!u->source_trigger || trigger_role)
         return trigger_role;
 
     PA_IDXSET_FOREACH(source, u->core->sources, idx)
-        if ((trigger_role = find_trigger_stream(u, PA_OBJECT(source), ignore_stream, g)))
+        if ((trigger_role = find_trigger_stream(u, current_stream, PA_OBJECT(source), ignore_stream, g)))
             break;
 
     return trigger_role;
@@ -204,7 +225,7 @@ static inline void apply_interaction_to_sink(struct userdata *u, pa_sink *s, con
             role = "no_role";
 
         PA_IDXSET_FOREACH(interaction_role, g->interaction_roles, role_idx) {
-            if ((trigger = pa_streq(role, interaction_role)))
+            if ((trigger = (pa_streq(interaction_role, role) && (!get_trigger_role(u, PA_OBJECT(j), g) || !pa_safe_streq(new_trigger, role)))))
                 break;
             if ((trigger = (pa_streq(interaction_role, "any_role") && !get_trigger_role(u, PA_OBJECT(j), g))))
                 break;
@@ -289,10 +310,10 @@ static pa_hook_result_t process(struct userdata *u, pa_object *stream, bool crea
 
     for (j = 0; j < u->n_groups; j++) {
         if (u->global) {
-            trigger_role = find_global_trigger_stream(u, create ? NULL : stream, u->groups[j]);
+            trigger_role = find_global_trigger_stream(u, stream, create ? NULL : stream, u->groups[j]);
             apply_interaction_global(u, trigger_role, create ? NULL : (pa_sink_input_isinstance(stream) ? PA_SINK_INPUT(stream) : NULL), new_stream, u->groups[j]);
         } else {
-            trigger_role = find_trigger_stream(u, GET_DEVICE_FROM_STREAM(stream), create ? NULL : stream, u->groups[j]);
+            trigger_role = find_trigger_stream(u, stream, GET_DEVICE_FROM_STREAM(stream), create ? NULL : stream, u->groups[j]);
             if (pa_sink_input_isinstance(stream))
                 apply_interaction_to_sink(u, PA_SINK_INPUT(stream)->sink, trigger_role, create ? NULL : PA_SINK_INPUT(stream), new_stream, u->groups[j]);
         }
@@ -423,6 +444,9 @@ int pa_stream_interaction_init(pa_module *m, const char* const v_modargs[]) {
     bool global = false;
     bool source_trigger = false;
     uint32_t i = 0;
+    uint32_t group_count_tr = 0;
+    uint32_t group_count_du = 0;
+    uint32_t group_count_vol = 0;
 
     pa_assert(m);
 
@@ -441,30 +465,28 @@ int pa_stream_interaction_init(pa_module *m, const char* const v_modargs[]) {
 
     u->n_groups = 1;
 
+    roles = pa_modargs_get_value(ma, "trigger_roles", NULL);
+    if (roles) {
+        const char *split_state = NULL;
+        char *n = NULL;
+        while ((n = pa_split(roles, "/", &split_state))) {
+            group_count_tr++;
+            pa_xfree(n);
+        }
+    }
+    roles = pa_modargs_get_value(ma, u->duck ? "ducking_roles" : "cork_roles", NULL);
+    if (roles) {
+        const char *split_state = NULL;
+        char *n = NULL;
+        while ((n = pa_split(roles, "/", &split_state))) {
+            group_count_du++;
+            pa_xfree(n);
+        }
+    }
+
     if (u->duck) {
         const char *volumes;
-        uint32_t group_count_tr = 0;
-        uint32_t group_count_du = 0;
-        uint32_t group_count_vol = 0;
 
-        roles = pa_modargs_get_value(ma, "trigger_roles", NULL);
-        if (roles) {
-            const char *split_state = NULL;
-            char *n = NULL;
-            while ((n = pa_split(roles, "/", &split_state))) {
-                group_count_tr++;
-                pa_xfree(n);
-            }
-        }
-        roles = pa_modargs_get_value(ma, "ducking_roles", NULL);
-        if (roles) {
-            const char *split_state = NULL;
-            char *n = NULL;
-            while ((n = pa_split(roles, "/", &split_state))) {
-                group_count_du++;
-                pa_xfree(n);
-            }
-        }
         volumes = pa_modargs_get_value(ma, "volume", NULL);
         if (volumes) {
             const char *split_state = NULL;
@@ -480,10 +502,15 @@ int pa_stream_interaction_init(pa_module *m, const char* const v_modargs[]) {
             pa_log("Invalid number of groups");
             goto fail;
         }
-
-        if (group_count_tr > 0)
-            u->n_groups = group_count_tr;
+    } else {
+        if ((group_count_tr > 1 || group_count_du > 1) && (group_count_tr != group_count_du)) {
+            pa_log("Invalid number of groups");
+            goto fail;
+        }
     }
+
+    if (group_count_tr > 0)
+        u->n_groups = group_count_tr;
 
     u->groups = pa_xnew0(struct group*, u->n_groups);
     for (i = 0; i < u->n_groups; i++) {

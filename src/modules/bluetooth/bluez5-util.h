@@ -62,12 +62,14 @@ typedef struct pa_bluetooth_device pa_bluetooth_device;
 typedef struct pa_bluetooth_adapter pa_bluetooth_adapter;
 typedef struct pa_bluetooth_discovery pa_bluetooth_discovery;
 typedef struct pa_bluetooth_backend pa_bluetooth_backend;
+typedef struct pa_upower_backend pa_upower_backend;
 
 typedef enum pa_bluetooth_hook {
     PA_BLUETOOTH_HOOK_ADAPTER_UUIDS_CHANGED,            /* Call data: pa_bluetooth_adapter */
     PA_BLUETOOTH_HOOK_DEVICE_CONNECTION_CHANGED,        /* Call data: pa_bluetooth_device */
     PA_BLUETOOTH_HOOK_DEVICE_UNLINK,                    /* Call data: pa_bluetooth_device */
     PA_BLUETOOTH_HOOK_DEVICE_BATTERY_LEVEL_CHANGED,     /* Call data: pa_bluetooth_device */
+    PA_BLUETOOTH_HOOK_HOST_BATTERY_LEVEL_CHANGED,       /* Call data: pa_upower_backend */
     PA_BLUETOOTH_HOOK_TRANSPORT_STATE_CHANGED,          /* Call data: pa_bluetooth_transport */
     PA_BLUETOOTH_HOOK_TRANSPORT_SOURCE_VOLUME_CHANGED,  /* Call data: pa_bluetooth_transport */
     PA_BLUETOOTH_HOOK_TRANSPORT_SINK_VOLUME_CHANGED,    /* Call data: pa_bluetooth_transport */
@@ -245,4 +247,5 @@ void pa_bluetooth_discovery_set_ofono_running(pa_bluetooth_discovery *y, bool is
 bool pa_bluetooth_discovery_get_enable_native_hsp_hs(pa_bluetooth_discovery *y);
 bool pa_bluetooth_discovery_get_enable_native_hfp_hf(pa_bluetooth_discovery *y);
 bool pa_bluetooth_discovery_get_enable_msbc(pa_bluetooth_discovery *y);
+pa_hashmap* pa_bluetooth_discovery_get_transports(pa_bluetooth_discovery *y);
 #endif

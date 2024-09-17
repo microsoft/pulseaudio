@@ -162,7 +162,7 @@ static void add_profiles(struct userdata *u, pa_hashmap *h, pa_hashmap *ports) {
 
             PA_IDXSET_FOREACH(m, ap->output_mappings, idx) {
                 if (u->use_ucm)
-                    pa_alsa_ucm_add_ports_combination(NULL, &m->ucm_context, true, ports, cp, u->core);
+                    pa_alsa_ucm_add_port(NULL, &m->ucm_context, true, ports, cp, u->core);
                 else
                     pa_alsa_path_set_add_ports(m->output_path_set, cp, ports, NULL, u->core);
                 if (m->channel_map.channels > cp->max_sink_channels)
@@ -175,7 +175,7 @@ static void add_profiles(struct userdata *u, pa_hashmap *h, pa_hashmap *ports) {
 
             PA_IDXSET_FOREACH(m, ap->input_mappings, idx) {
                 if (u->use_ucm)
-                    pa_alsa_ucm_add_ports_combination(NULL, &m->ucm_context, false, ports, cp, u->core);
+                    pa_alsa_ucm_add_port(NULL, &m->ucm_context, false, ports, cp, u->core);
                 else
                     pa_alsa_path_set_add_ports(m->input_path_set, cp, ports, NULL, u->core);
                 if (m->channel_map.channels > cp->max_source_channels)
@@ -249,8 +249,7 @@ static int card_set_profile(pa_card *c, pa_card_profile *new_profile) {
 
     /* if UCM is available for this card then update the verb */
     if (u->use_ucm) {
-        if (pa_alsa_ucm_set_profile(&u->ucm, c, nd->profile ? nd->profile->name : NULL,
-                    od->profile ? od->profile->name : NULL) < 0) {
+        if (pa_alsa_ucm_set_profile(&u->ucm, c, nd->profile, od->profile) < 0) {
             ret = -1;
             goto finish;
         }
@@ -302,7 +301,7 @@ static void init_profile(struct userdata *u) {
 
     if (d->profile && u->use_ucm) {
         /* Set initial verb */
-        if (pa_alsa_ucm_set_profile(ucm, u->card, d->profile->name, NULL) < 0) {
+        if (pa_alsa_ucm_set_profile(ucm, u->card, d->profile, NULL) < 0) {
             pa_log("Failed to set ucm profile %s", d->profile->name);
             return;
         }
@@ -371,7 +370,7 @@ struct temp_port_avail {
 
 static int report_jack_state(snd_mixer_elem_t *melem, unsigned int mask) {
     struct userdata *u = snd_mixer_elem_get_callback_private(melem);
-    snd_hctl_elem_t *elem = snd_mixer_elem_get_private(melem);
+    snd_hctl_elem_t **_elem = snd_mixer_elem_get_private(melem), *elem;
     snd_ctl_elem_value_t *elem_value;
     bool plugged_in;
     void *state;
@@ -381,6 +380,8 @@ static int report_jack_state(snd_mixer_elem_t *melem, unsigned int mask) {
     pa_available_t active_available = PA_AVAILABLE_UNKNOWN;
 
     pa_assert(u);
+    pa_assert(_elem);
+    elem = *_elem;
 
     /* Changing the jack state may cause a port change, and a port change will
      * make the sink or source change the mixer settings. If there are multiple
@@ -563,12 +564,17 @@ static pa_device_port* find_port_with_eld_device(struct userdata *u, int device)
 
 static int hdmi_eld_changed(snd_mixer_elem_t *melem, unsigned int mask) {
     struct userdata *u = snd_mixer_elem_get_callback_private(melem);
-    snd_hctl_elem_t *elem = snd_mixer_elem_get_private(melem);
-    int device = snd_hctl_elem_get_device(elem);
+    snd_hctl_elem_t **_elem = snd_mixer_elem_get_private(melem), *elem;
+    int device;
     const char *old_monitor_name;
     pa_device_port *p;
     pa_hdmi_eld eld;
     bool changed = false;
+
+    pa_assert(u);
+    pa_assert(_elem);
+    elem = *_elem;
+    device = snd_hctl_elem_get_device(elem);
 
     if (mask == SND_CTL_EVENT_MASK_REMOVE)
         return 0;

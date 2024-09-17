@@ -14,8 +14,8 @@ msgstr ""
 "Project-Id-Version: pulseaudio.master-tx.de\n"
 "Report-Msgid-Bugs-To: https://gitlab.freedesktop.org/pulseaudio/pulseaudio/"
 "issues/new\n"
-"POT-Creation-Date: 2022-05-16 23:56+0300\n"
-"PO-Revision-Date: 2021-12-05 21:16+0000\n"
+"POT-Creation-Date: 2022-06-18 09:49+0300\n"
+"PO-Revision-Date: 2022-12-06 09:20+0000\n"
 "Last-Translator: Ettore Atalan <atalanttore@googlemail.com>\n"
 "Language-Team: German <https://translate.fedoraproject.org/projects/"
 "pulseaudio/pulseaudio/de/>\n"
@@ -24,7 +24,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
-"X-Generator: Weblate 4.9.1\n"
+"X-Generator: Weblate 4.14.2\n"
 
 #: src/daemon/cmdline.c:113
 #, fuzzy, c-format
@@ -188,7 +188,6 @@ msgid "--fail expects boolean argument"
 msgstr "--fail erfordert boolesche Variable"
 
 #: src/daemon/cmdline.c:265
-#, fuzzy
 msgid ""
 "--log-level expects log level argument (either numeric in range 0..4 or one "
 "of error, warn, notice, info, debug)."
@@ -218,14 +217,12 @@ msgid "--use-pid-file expects boolean argument"
 msgstr "--use-pid-file erfordert boolesche Variable"
 
 #: src/daemon/cmdline.c:328
-#, fuzzy
 msgid ""
 "Invalid log target: use either 'syslog', 'journal', 'stderr' or 'auto' or a "
 "valid file name 'file:<path>', 'newfile:<path>'."
 msgstr ""
-"Ungültiges Protokollziel: Benutzen Sie entweder »syslog«, »journal«, "
-"»stderr« oder »auto« oder einen gültigen Dateinamen »file:<Pfad>«, »newfile:"
-"<Pfad>«."
+"Ungültiges Protokollziel: Benutzen Sie entweder »syslog«, »journal«, »stderr«"
+" oder »auto« oder einen gültigen Dateinamen »file:<Pfad>«, »newfile:<Pfad>«."
 
 #: src/daemon/cmdline.c:330
 msgid ""
@@ -1152,8 +1149,8 @@ msgstr ""
 "autoloaded=<setzen, wenn dieses Modul automatisch geladen wird> "
 "use_volume_sharing=<yes oder no> "
 
-#: src/modules/module-equalizer-sink.c:1094
-#: src/modules/module-equalizer-sink.c:1217
+#: src/modules/module-equalizer-sink.c:1097
+#: src/modules/module-equalizer-sink.c:1220
 #, c-format
 msgid "FFT based equalizer on %s"
 msgstr ""
@@ -1220,14 +1217,14 @@ msgstr "Audio auf @HOSTNAME@"
 
 #. TODO: old tunnel put here the remote sink_name into stream name e.g. 'Null Output for lynxis@lazus'
 #. TODO: old tunnel put here the remote source_name into stream name e.g. 'Null Output for lynxis@lazus'
-#: src/modules/module-tunnel-sink-new.c:356
-#: src/modules/module-tunnel-source-new.c:342
+#: src/modules/module-tunnel-sink-new.c:370
+#: src/modules/module-tunnel-source-new.c:354
 #, c-format
 msgid "Tunnel for %s@%s"
 msgstr "Tunnel für %s@%s"
 
-#: src/modules/module-tunnel-sink-new.c:697
-#: src/modules/module-tunnel-source-new.c:668
+#: src/modules/module-tunnel-sink-new.c:715
+#: src/modules/module-tunnel-source-new.c:684
 #, c-format
 msgid "Tunnel to %s/%s"
 msgstr "Tunnel zu %s/%s"
@@ -1576,11 +1573,11 @@ msgstr ""
 msgid "Invalid log target."
 msgstr "Ungültiges Protokollziel."
 
-#: src/pulsecore/sink.c:3600
+#: src/pulsecore/sink.c:3609
 msgid "Built-in Audio"
 msgstr "Internes Audio"
 
-#: src/pulsecore/sink.c:3605
+#: src/pulsecore/sink.c:3614
 msgid "Modem"
 msgstr "Modem"
 
@@ -3160,7 +3157,7 @@ msgstr "Sie müssen einen Ziel-Namen/-Indexwert und eine Lautstärke angeben."
 #: src/utils/pactl.c:3021 src/utils/pactl.c:3101
 #, fuzzy
 msgid "You have to specify a source name/index"
-msgstr "Sie müssen einen Quellennamen angeben."
+msgstr "Sie müssen einen Quellennamen/-index angeben"
 
 #: src/utils/pactl.c:3031
 msgid "You have to specify a source name/index and a volume"

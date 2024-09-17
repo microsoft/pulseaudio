@@ -116,6 +116,8 @@ struct userdata {
     pa_hook_slot *sink_volume_changed_slot;
     pa_hook_slot *source_volume_changed_slot;
 
+    pa_hook_slot *source_output_new_hook_slot;
+
     pa_bluetooth_discovery *discovery;
     pa_bluetooth_device *device;
     pa_bluetooth_transport *transport;
@@ -392,6 +394,8 @@ static int bt_process_render(struct userdata *u) {
 
     if (processed != u->write_memchunk.length) {
         pa_log_error("Encoding error");
+        pa_memblock_unref(u->write_memchunk.memblock);
+        pa_memchunk_reset(&u->write_memchunk);
         return -1;
     }
 
@@ -535,6 +539,7 @@ static int bt_process_push(struct userdata *u) {
 
     if (processed != (size_t) received) {
         pa_log_error("Decoding error");
+        pa_memblock_unref(memchunk.memblock);
         return -1;
     }
 
@@ -961,6 +966,12 @@ static void source_setup_volume_callback(pa_source *s) {
     if (pa_bluetooth_profile_is_a2dp(u->profile) && !u->transport->device->avrcp_absolute_volume)
         return;
 
+    /* Do not use hardware volume controls for backchannel of A2DP sink */
+    if (u->profile == PA_BLUETOOTH_PROFILE_A2DP_SINK) {
+        pa_assert_fp(u->transport->bt_codec && u->transport->bt_codec->support_backchannel);
+        return;
+    }
+
     /* Remote volume control has to be supported for the callback to make sense,
      * otherwise this source should continue performing attenuation in software
      * without HW_VOLUME_CTL.
@@ -1029,6 +1040,12 @@ static int add_source(struct userdata *u) {
 
     if (!u->transport_acquired)
         switch (u->profile) {
+            case PA_BLUETOOTH_PROFILE_A2DP_SINK:
+                if (u->bt_codec && u->bt_codec->support_backchannel)
+                    data.suspend_cause = PA_SUSPEND_USER;
+                else
+                    pa_assert_not_reached();
+                break;
             case PA_BLUETOOTH_PROFILE_A2DP_SOURCE:
             case PA_BLUETOOTH_PROFILE_HFP_AG:
             case PA_BLUETOOTH_PROFILE_HSP_AG:
@@ -1043,7 +1060,6 @@ static int add_source(struct userdata *u) {
                 else
                     pa_assert_not_reached();
                 break;
-            case PA_BLUETOOTH_PROFILE_A2DP_SINK:
             case PA_BLUETOOTH_PROFILE_OFF:
                 pa_assert_not_reached();
                 break;
@@ -1198,6 +1214,12 @@ static void sink_setup_volume_callback(pa_sink *s) {
     if (pa_bluetooth_profile_is_a2dp(u->profile) && !u->transport->device->avrcp_absolute_volume)
         return;
 
+    /* Do not use hardware volume controls for backchannel of A2DP source */
+    if (u->profile == PA_BLUETOOTH_PROFILE_A2DP_SOURCE) {
+        pa_assert_fp(u->transport->bt_codec && u->transport->bt_codec->support_backchannel);
+        return;
+    }
+
     /* Remote volume control has to be supported for the callback to make sense,
      * otherwise this sink should continue performing attenuation in software
      * without HW_VOLUME_CTL.
@@ -1322,6 +1344,7 @@ static pa_direction_t get_profile_direction(pa_bluetooth_profile_t p) {
 
 /* Run from main thread */
 static int transport_config(struct userdata *u) {
+    bool reverse_backchannel;
     pa_assert(u);
     pa_assert(u->transport);
     pa_assert(!u->bt_codec);
@@ -1334,15 +1357,18 @@ static int transport_config(struct userdata *u) {
     /* reset encoder buffer contents */
     u->encoder_buffer_used = 0;
 
-    if (get_profile_direction(u->profile) & PA_DIRECTION_OUTPUT) {
-        u->encoder_info = u->bt_codec->init(true, false, u->transport->config, u->transport->config_size, &u->encoder_sample_spec, u->core);
+    /* forward encoding direction */
+    reverse_backchannel = u->bt_codec->support_backchannel && !(get_profile_direction(u->profile) & PA_DIRECTION_OUTPUT);
+
+    if ((get_profile_direction(u->profile) & PA_DIRECTION_OUTPUT) || u->bt_codec->support_backchannel) {
+        u->encoder_info = u->bt_codec->init(true, reverse_backchannel, u->transport->config, u->transport->config_size, &u->encoder_sample_spec, u->core);
 
         if (!u->encoder_info)
             return -1;
     }
 
-    if (get_profile_direction(u->profile) & PA_DIRECTION_INPUT) {
-        u->decoder_info = u->bt_codec->init(false, false, u->transport->config, u->transport->config_size, &u->decoder_sample_spec, u->core);
+    if ((get_profile_direction(u->profile) & PA_DIRECTION_INPUT) || u->bt_codec->support_backchannel) {
+        u->decoder_info = u->bt_codec->init(false, reverse_backchannel, u->transport->config, u->transport->config_size, &u->decoder_sample_spec, u->core);
 
         if (!u->decoder_info) {
             if (u->encoder_info) {
@@ -1400,11 +1426,11 @@ static int init_profile(struct userdata *u) {
 
     pa_assert(u->transport);
 
-    if (get_profile_direction (u->profile) & PA_DIRECTION_OUTPUT)
+    if ((get_profile_direction(u->profile) & PA_DIRECTION_OUTPUT) || u->bt_codec->support_backchannel)
         if (add_sink(u) < 0)
             r = -1;
 
-    if (get_profile_direction (u->profile) & PA_DIRECTION_INPUT)
+    if ((get_profile_direction(u->profile) & PA_DIRECTION_INPUT) || u->bt_codec->support_backchannel)
         if (add_source(u) < 0)
             r = -1;
 
@@ -1523,8 +1549,8 @@ static void thread_func(void *userdata) {
                     writable = true;
 
                 /* If we have a source, we let the source determine the timing
-                 * for the sink */
-                if (have_source) {
+                 * for the sink unless peer has not sent any data yet */
+                if (have_source && u->read_index > 0) {
 
                     /* If the stream is writable, send some data if necessary */
                     if (writable) {
@@ -1605,13 +1631,15 @@ static void thread_func(void *userdata) {
                                 skip_bytes -= bytes_to_render;
                             }
 
-                            if (u->write_index > 0 && (get_profile_direction(u->profile) & PA_DIRECTION_OUTPUT)) {
-                                size_t new_write_block_size = u->bt_codec->reduce_encoder_bitrate(u->encoder_info, u->write_link_mtu);
-                                if (new_write_block_size) {
-                                    u->write_block_size = new_write_block_size;
-                                    handle_sink_block_size_change(u);
+                            if (u->write_index > 0 && (get_profile_direction(u->profile) & PA_DIRECTION_OUTPUT || u->bt_codec->support_backchannel)) {
+                                if (u->bt_codec->reduce_encoder_bitrate) {
+                                    size_t new_write_block_size = u->bt_codec->reduce_encoder_bitrate(u->encoder_info, u->write_link_mtu);
+                                    if (new_write_block_size) {
+                                        u->write_block_size = new_write_block_size;
+                                        handle_sink_block_size_change(u);
+                                    }
+                                    pa_gettimeofday(&tv_last_output_rate_change);
                                 }
-                                pa_gettimeofday(&tv_last_output_rate_change);
                             }
                         }
 
@@ -1635,6 +1663,12 @@ static void thread_func(void *userdata) {
                             goto fail;
 
                         if (result) {
+                            if (have_source && u->read_index <= 0) {
+                                /* We have a source but peer has not sent any data yet, log this */
+                                if (pa_log_ratelimit(PA_LOG_DEBUG))
+                                    pa_log_debug("Still no data received from source, sent one more block to sink");
+                            }
+
                             writable = false;
                             have_written = true;
                         }
@@ -1654,7 +1688,7 @@ static void thread_func(void *userdata) {
                             sleep_for = time_passed < next_write_at ? next_write_at - time_passed : 0;
                             /* pa_log("Sleeping for %lu; time passed %lu, next write at %lu", (unsigned long) sleep_for, (unsigned long) time_passed, (unsigned long)next_write_at); */
 
-                            if ((get_profile_direction(u->profile) & PA_DIRECTION_OUTPUT) && u->write_memchunk.memblock == NULL) {
+                            if ((get_profile_direction(u->profile) & PA_DIRECTION_OUTPUT || u->bt_codec->support_backchannel) && u->write_memchunk.memblock == NULL) {
                                 /* bt_write_buffer() is keeping up with input, try increasing bitrate */
                                 if (u->bt_codec->increase_encoder_bitrate
                                     && pa_timeval_age(&tv_last_output_rate_change) >= u->device->output_rate_refresh_interval_ms * PA_USEC_PER_MSEC) {
@@ -1886,10 +1920,10 @@ static pa_available_t get_port_availability(struct userdata *u, pa_direction_t d
     for (i = 0; i < PA_BLUETOOTH_PROFILE_COUNT; i++) {
         pa_bluetooth_transport *transport;
 
-        if (!(get_profile_direction(i) & direction))
+        if (!(transport = u->device->transports[i]))
             continue;
 
-        if (!(transport = u->device->transports[i]))
+        if (!(get_profile_direction(i) & direction || (transport->bt_codec && transport->bt_codec->support_backchannel)))
             continue;
 
         switch(transport->state) {
@@ -2729,6 +2763,30 @@ static int device_process_msg(pa_msgobject *obj, int code, void *data, int64_t o
     return 0;
 }
 
+/* Run from main thread */
+static pa_hook_result_t a2dp_source_output_fixate_hook_callback(pa_core *c, pa_source_output_new_data *new_data, struct userdata *u) {
+    double volume_factor_dB;
+    pa_cvolume cv;
+
+    pa_assert(c);
+    pa_assert(new_data);
+    pa_assert(u);
+
+    /* When transport is released, there is no decoder and no codec */
+    if (!u->bt_codec || !u->decoder_info)
+        return PA_HOOK_OK;
+
+    if (!u->bt_codec->get_source_output_volume_factor_dB)
+        return PA_HOOK_OK;
+
+    volume_factor_dB = u->bt_codec->get_source_output_volume_factor_dB(u->decoder_info);
+
+    pa_cvolume_set(&cv, u->decoder_sample_spec.channels, pa_sw_volume_from_dB(volume_factor_dB));
+    pa_source_output_new_data_apply_volume_factor_source(new_data, &cv);
+
+    return PA_HOOK_OK;
+}
+
 int pa__init(pa_module* m) {
     struct userdata *u;
     const char *path;
@@ -2810,6 +2868,8 @@ int pa__init(pa_module* m) {
     u->transport_source_volume_changed_slot =
         pa_hook_connect(pa_bluetooth_discovery_hook(u->discovery, PA_BLUETOOTH_HOOK_TRANSPORT_SOURCE_VOLUME_CHANGED), PA_HOOK_NORMAL, (pa_hook_cb_t) transport_source_volume_changed_cb, u);
 
+    u->source_output_new_hook_slot = pa_hook_connect(&m->core->hooks[PA_CORE_HOOK_SOURCE_OUTPUT_NEW], PA_HOOK_EARLY, (pa_hook_cb_t) a2dp_source_output_fixate_hook_callback, u);
+
     if (add_card(u) < 0)
         goto fail;
 
@@ -2872,6 +2932,9 @@ void pa__done(pa_module *m) {
     }
 
     stop_thread(u);
+
+    if (u->source_output_new_hook_slot)
+        pa_hook_slot_free(u->source_output_new_hook_slot);
 
     if (u->device_connection_changed_slot)
         pa_hook_slot_free(u->device_connection_changed_slot);

@@ -1,10 +1,12 @@
-project('pulseaudio', 'c', 'cpp',
-        version : run_command(find_program('git-version-gen'), join_paths(meson.current_source_dir(), '.tarball-version')).stdout().strip(),
+project('pulseaudio', 'c',
+        version : run_command(find_program('git-version-gen'), join_paths(meson.current_source_dir(), '.tarball-version'), check : false).stdout().strip(),
         meson_version : '>= 0.50.0',
-        default_options : [ 'c_std=gnu11', 'cpp_std=c++11' ]
+        default_options : [ 'c_std=gnu11', 'cpp_std=c++17' ]
         )
 
-meson.add_dist_script('scripts/save-tarball-version.sh', meson.project_version())
+if not meson.is_subproject()
+  meson.add_dist_script('scripts/save-tarball-version.sh', meson.project_version())
+endif
 
 pa_version_str = meson.project_version()
 # For tarballs, the first split will do nothing, but for builds in git, we
@@ -25,7 +27,7 @@ pa_protocol_version = 35
 
 # The stable ABI for client applications, for the version info x:y:z
 # always will hold x=z
-libpulse_version_info = [24, 2, 24]
+libpulse_version_info = [24, 3, 24]
 
 # A simplified, synchronous, ABI-stable interface for client
 # applications, for the version info x:y:z always will hold x=z
@@ -148,7 +150,13 @@ cdata.set_quoted('PA_MACHINE_ID', join_paths(sysconfdir, 'machine-id'))
 cdata.set_quoted('PA_MACHINE_ID_FALLBACK', join_paths(localstatedir, 'lib', 'dbus', 'machine-id'))
 cdata.set_quoted('PA_SRCDIR', join_paths(meson.current_source_dir(), 'src'))
 cdata.set_quoted('PA_BUILDDIR', meson.current_build_dir())
-cdata.set_quoted('PA_SOEXT', '.so')
+if host_machine.system() == 'windows'
+  cdata.set_quoted('PA_SOEXT', '.dll')
+elif host_machine.system() == 'darwin'
+  cdata.set_quoted('PA_SOEXT', '.dylib')
+else
+  cdata.set_quoted('PA_SOEXT', '.so')
+endif
 cdata.set_quoted('PA_DEFAULT_CONFIG_DIR', pulsesysconfdir)
 cdata.set('PA_DEFAULT_CONFIG_DIR_UNQUOTED', pulsesysconfdir)
 cdata.set_quoted('PA_BINARY', join_paths(bindir, 'pulseaudio'))
@@ -160,8 +168,7 @@ cdata.set_quoted('PA_SYSTEM_USER', get_option('system_user'))
 cdata.set_quoted('PA_SYSTEM_GROUP', get_option('system_group'))
 cdata.set_quoted('PA_ACCESS_GROUP', get_option('access_group'))
 cdata.set_quoted('PA_CFLAGS', 'Not yet supported on meson')
-cdata.set_quoted('PA_ALSA_PATHS_DIR', join_paths(alsadatadir, 'paths'))
-cdata.set_quoted('PA_ALSA_PROFILE_SETS_DIR', join_paths(alsadatadir, 'profile-sets'))
+cdata.set_quoted('PA_ALSA_DATA_DIR', alsadatadir)
 cdata.set_quoted('DESKTOPFILEDIR', join_paths(datadir, 'applications'))
 cdata.set_quoted('PULSE_LOCALEDIR', localedir)
 cdata.set_quoted('GETTEXT_PACKAGE', 'pulseaudio')
@@ -424,7 +431,7 @@ cdata.set('MESON_BUILD', 1)
 # so we request the nodelete flag to be enabled.
 # On other systems, we don't really know how to do that, but it's welcome if somebody can tell.
 # Windows doesn't support this flag.
-if host_machine.system() != 'windows'
+if host_machine.system() != 'windows' and host_machine.system() != 'darwin'
   nodelete_link_args = ['-Wl,-z,nodelete']
 else
   nodelete_link_args = []
@@ -433,6 +440,7 @@ endif
 # Code coverage
 
 if get_option('gcov')
+  add_languages('cpp')
   add_project_arguments('--coverage', language: ['c', 'cpp'])
   add_project_link_arguments('--coverage', language: ['c', 'cpp'])
 endif
@@ -498,22 +506,24 @@ endif
 
 need_libatomic_ops = false
 
-atomictest = '''void func() {
+atomictest = '''int main() {
   volatile int atomic = 2;
   __sync_bool_compare_and_swap (&atomic, 2, 3);
+  return 0;
 }
 '''
 
-if cc.compiles(atomictest)
+if cc.links(atomictest)
   cdata.set('HAVE_ATOMIC_BUILTINS', 1)
 
-  newatomictest = '''void func() {
+  newatomictest = '''int main() {
     int c = 0;
     __atomic_store_n(&c, 4, __ATOMIC_SEQ_CST);
+    return 0;
   }
   '''
 
-  if(cc.compiles(newatomictest))
+  if(cc.links(newatomictest))
     cdata.set('HAVE_ATOMIC_BUILTINS_MEMORY_MODEL', 1)
   endif
 
@@ -681,7 +691,7 @@ if get_option('daemon')
     cdata.set('HAVE_ALSA_UCM', 1)
   endif
 
-  gio_dep = dependency('gio-2.0', version : '>= 2.26.0')
+  gio_dep = dependency('gio-2.0', version : '>= 2.26.0', required : false)
   if get_option('gsettings').enabled()
     assert(gio_dep.found(), 'GSettings support needs glib I/O library (GIO)')
     cdata.set('HAVE_GSETTINGS', 1)
@@ -717,7 +727,7 @@ if get_option('daemon')
     cdata.set('HAVE_SOXR', 1)
   endif
 
-  webrtc_dep = dependency('webrtc-audio-processing', version : '>= 0.2', required : get_option('webrtc-aec'))
+  webrtc_dep = dependency('webrtc-audio-processing-1', version : '>= 1.0', required : get_option('webrtc-aec'))
   if webrtc_dep.found()
     cdata.set('HAVE_WEBRTC', 1)
   endif
@@ -730,6 +740,10 @@ if get_option('daemon')
   libelogind_dep = dependency('libelogind', required : get_option('elogind'))
   if libelogind_dep.found()
     cdata.set('HAVE_SYSTEMD_LOGIN', 1)
+  endif
+
+  if get_option('consolekit').enabled()
+    assert(dbus_dep.found(), 'ConsoleKit requires D-Bus support')
   endif
 
   tcpwrap_dep = cc.find_library('wrap', required: get_option('tcpwrap'))
@@ -1001,6 +1015,7 @@ summary += [
   '  Enable HAL->udev compat:     @0@'.format(get_option('hal-compat')),
   'Enable systemd units:          @0@'.format(systemd_dep.found()),
   'Enable elogind:                @0@'.format(libelogind_dep.found()),
+  'Enable ConsoleKit:             @0@'.format(not get_option('consolekit').disabled() and dbus_dep.found()),
   'Enable TCP Wrappers:           @0@'.format(tcpwrap_dep.found()),
   'Enable OpenSSL (for Airtunes): @0@'.format(openssl_dep.found()),
   'Database:                      @0@'.format(get_option('database')),

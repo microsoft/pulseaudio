@@ -676,7 +676,7 @@ static int sink_process_msg(pa_msgobject *o, int code, void *data, int64_t offse
              * IO thread context where the rest of the messages are
              * dispatched. Yeah, ugly, but I am a lazy bastard. */
 
-            pa_pstream_send_memblock(u->pstream, u->channel, 0, PA_SEEK_RELATIVE, chunk);
+            pa_pstream_send_memblock(u->pstream, u->channel, 0, PA_SEEK_RELATIVE, chunk, pa_frame_size(&u->sink->sample_spec));
 
             u->receive_counter += chunk->length;
 
@@ -1000,7 +1000,7 @@ static void stream_get_latency_callback(pa_pdispatch *pd, uint32_t command, uint
     else
         delay -= (int64_t) pa_bytes_to_usec((uint64_t) (read_index-write_index), ss);
 
-    /* Our measurements are already out of date, hence correct by the     *
+    /* Our measurements are already out of date, hence correct by the
      * transport latency */
 #ifdef TUNNEL_SINK
     delay -= (int64_t) u->transport_usec;
@@ -1008,7 +1008,7 @@ static void stream_get_latency_callback(pa_pdispatch *pd, uint32_t command, uint
     delay += (int64_t) u->transport_usec;
 #endif
 
-    /* Now correct by what we have have written since we requested the update. This
+    /* Now correct by what we have written since we requested the update. This
      * is not necessary for the source, because if data is received between request
      * and reply, it was already posted before we requested the source latency. */
 #ifdef TUNNEL_SINK

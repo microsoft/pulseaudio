@@ -182,9 +182,14 @@ if host_machine.system() == 'windows'
 else
   libpulsecommon_sources += [
     'pulsecore/mutex-posix.c',
-    'pulsecore/semaphore-posix.c',
-    'pulsecore/thread-posix.c'
+    'pulsecore/poll-posix.c',
+    'pulsecore/thread-posix.c',
   ]
+  if host_machine.system() == 'darwin'
+    libpulsecommon_sources += ['pulsecore/semaphore-osx.c']
+  else
+    libpulsecommon_sources += ['pulsecore/semaphore-posix.c']
+  endif
 endif
 # FIXME: Do SIMD things
 
@@ -205,7 +210,7 @@ else
       libm_dep, thread_dep, dl_dep, shm_dep, iconv_dep, sndfile_dep, dbus_dep,
       x11_dep, libsystemd_dep, glib_dep.partial_dependency(compile_args: true),
       gtk_dep.partial_dependency(compile_args: true), asyncns_dep, libintl_dep,
-      platform_dep, platform_socket_dep, execinfo_dep,
+      platform_dep, platform_socket_dep, execinfo_dep, libatomic_ops_dep,
     ],
     implicit_include_directories : false)
 

@@ -23,6 +23,7 @@
 
 #include <stdio.h>
 #include <errno.h>
+#include <math.h>
 
 #include <pulse/rtclock.h>
 #include <pulse/timeval.h>
@@ -178,7 +179,7 @@ struct userdata {
 #ifdef USE_SMOOTHER_2
         pa_smoother_2 *smoother;
 #else
-         pa_smoother *smoother;
+        pa_smoother *smoother;
 #endif
         uint64_t counter;
 
@@ -239,7 +240,7 @@ static uint32_t rate_controller(
 
     /* Choose the rate that is nearer to base_rate */
     new_rate = new_rate_2;
-    if (abs(new_rate_1 - base_rate) < abs(new_rate_2 - base_rate))
+    if (fabs(new_rate_1 - base_rate) < fabs(new_rate_2 - base_rate))
         new_rate = new_rate_1;
 
     return (uint32_t)(new_rate + 0.5);
@@ -1710,9 +1711,6 @@ int pa__init(pa_module*m) {
     PA_IDXSET_FOREACH(o, u->outputs, idx)
         output_verify(o);
 
-    if (u->adjust_time > 0)
-        u->time_event = pa_core_rttime_new(m->core, pa_rtclock_now() + u->adjust_time, time_callback, u);
-
     pa_modargs_free(ma);
 
     return 0;
@@ -1734,6 +1732,9 @@ void pa__done(pa_module*m) {
 
     if (!(u = m->userdata))
         return;
+
+    if (u->sink && PA_SINK_IS_LINKED(u->sink->state))
+        pa_sink_suspend(u->sink, true, PA_SUSPEND_UNAVAILABLE);
 
     pa_strlist_free(u->unlinked_slaves);
 
